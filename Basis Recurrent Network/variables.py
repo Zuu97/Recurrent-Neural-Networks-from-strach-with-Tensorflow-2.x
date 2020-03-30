@@ -1,4 +1,4 @@
-learning_rate = 0.1
+learning_rate = 10e-5
 num_epochs = 15
 verbose = 100
 

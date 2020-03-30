@@ -64,7 +64,7 @@ class BaseRNN(object):
         return h
 
     def language_model(self, tfX,tfY, learning_rate = learning_rate):
-        self.optimizer = tf.optimizers.SGD(learning_rate)
+        self.optimizer = tf.optimizers.Adam(learning_rate)
         with tf.GradientTape() as tape:
 
             weights = tf.transpose(self.Wo, [1,0])
@@ -80,7 +80,7 @@ class BaseRNN(object):
                                                 labels=labels,
                                                 inputs=h,
                                                 num_sampled=50, # number of negative samples
-                                                num_classes=V))
+                                                num_classes=self.V))
 
         gradients = tape.gradient(self.current_loss, self.parameters)
         self.optimizer.apply_gradients(zip(gradients, self.parameters))
@@ -140,7 +140,7 @@ class BaseRNN(object):
 
     def predict_word(self,tfX):
         h = self.recurrent_cell(tfX)
-        return tf.squeeze(self.output_probs)
+        return self.output_probs
 
     def generate_text(self, word2idx, n_sentences=5):
         initial_distribution = BaseRNN.initial_word_distribution(word2idx)
@@ -148,11 +148,11 @@ class BaseRNN(object):
         idx2word = {v:k for k,v in word2idx.items()}
 
         X = [np.random.choice(init, p=initial_distribution)]
-        print("Starting word : ",idx2word[X[0]])
+        print(idx2word[X[0]], end=" ")
 
         line = 0
         while line < n_sentences:
-            log_probs = self.predict_word(X).numpy()
+            log_probs = self.predict_word(X).numpy()[0]
             word_idx = np.random.choice(init, p=log_probs)
             X.append(word_idx)
             if word_idx > 1: # make sure not start or end
@@ -163,7 +163,7 @@ class BaseRNN(object):
                 line += 1
                 print('')
                 if line < 4:
-                    X = [ np.random.choice(V, p=initial_distribution) ] # reset to start of line
+                    X = [ np.random.choice(V, p=np.squeeze(initial_distribution)) ] # reset to start of line
                     print(idx2word[X[0]], end=" ")
 
     @staticmethod
@@ -179,7 +179,7 @@ class BaseRNN(object):
 if __name__ == "__main__":
     sentences,word2idx = poetry_data()
     V = len(word2idx)
-    rnn = BaseRNN(10,10,V)
+    rnn = BaseRNN(50,50,V)
     if not os.path.exists(weight_path):
         rnn.fit(sentences)
         rnn.save_weights()
